@@ -10,12 +10,11 @@ const TodoListItemEditForm = ({
   const [description, setDescription] = useState(initialDescription);
 
   const handleSaveClick = () => {
-    // Call the onSave function passed as a prop with the updated title and description
     onSave({ title, description });
   };
 
   return (
-    <div className="bg-white p-6 w-full">
+    <div className="bg-white p-6 w-full max-w-md mx-auto rounded-lg shadow-lg">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Task</h3>
 
       <div className="mb-4">
@@ -33,9 +32,9 @@ const TodoListItemEditForm = ({
           Description
         </label>
         <textarea
+          className="mt-1 block w-full p-2 border border-gray-300 rounded-md h-32" // Adjust the height here
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
         />
       </div>
 

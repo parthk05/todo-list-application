@@ -8,6 +8,7 @@ const TodoItem = ({ title, description, completed, onEdit }) => {
         type="checkbox"
         className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
         readOnly
+        checked={completed}
       />
       <div className="ml-3 flex-1">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
