@@ -1,14 +1,28 @@
 import React, { useState } from "react";
+import axios from "axios";
 
 const TodoForm = ({ onClose }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    // Handle form submission
-    console.log("Task Created:", { title, description });
-    onClose(); // Close the form after submission
+
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/todos/", {
+        title,
+        description,
+        completed: false,
+      });
+
+      console.log("Task Created:", response.data);
+      onClose(); // Close the form after submission
+    } catch (error) {
+      console.error(
+        "Error creating task:",
+        error.response?.data || error.message
+      );
+    }
   };
 
   return (
