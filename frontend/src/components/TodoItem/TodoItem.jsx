@@ -1,7 +1,7 @@
 import React from "react";
 import { PencilIcon, TrashIcon } from "@heroicons/react/20/solid";
 
-const TodoItem = ({ title, description, completed, onEdit }) => {
+const TodoItem = ({ title, description, completed, onEdit, onDelete }) => {
   return (
     <div className="flex items-start pt-6">
       <input
@@ -24,6 +24,7 @@ const TodoItem = ({ title, description, completed, onEdit }) => {
         </button>
         <button
           type="button"
+          onClick={onDelete}
           className="inline-flex items-center rounded-md bg-red-100 px-2 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-200 focus:outline-none"
         >
           <TrashIcon className="h-5 w-5 text-red-500" aria-hidden="true" />

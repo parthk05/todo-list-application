@@ -1,48 +1,55 @@
 import React, { useState } from "react";
 import TodoItem from "../TodoItem/TodoItem";
-import TodoListItemEditForm from "../TodoEditForm/TodoEditForm";
 import todoListData from "../../data";
+import TodoListItemEditForm from "../TodoEditForm/TodoEditForm";
 
 const TodoList = () => {
-  const [isEditFormVisible, setIsEditFormVisible] = useState(false);
-  const [currentTodo, setCurrentTodo] = useState(null);
+  const [todos, setTodos] = useState(todoListData);
+  const [editingTodo, setEditingTodo] = useState(null);
 
-  const handleEditClick = (todo) => {
-    setCurrentTodo(todo);
-    setIsEditFormVisible(true);
+  const handleDelete = (id) => {
+    setTodos(todos.filter((todo) => todo.id !== id));
   };
 
-  const handleSave = (updatedTodo) => {
-    // Implement saving logic here (e.g., update the todo in state)
-    setIsEditFormVisible(false);
+  const handleEdit = (todo) => {
+    setEditingTodo(todo);
   };
 
-  const handleCancel = () => {
-    setIsEditFormVisible(false);
+  const handleSaveEdit = (updatedTodo) => {
+    setTodos(
+      todos.map((todo) => (todo.id === updatedTodo.id ? updatedTodo : todo))
+    );
+    setEditingTodo(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTodo(null);
   };
 
   return (
     <div>
-      {todoListData.map((todo) => (
+      {editingTodo && (
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-gray-600 bg-opacity-50">
+          <TodoListItemEditForm
+            initialTitle={editingTodo.title}
+            initialDescription={editingTodo.description}
+            onSave={(updatedTodo) =>
+              handleSaveEdit({ ...editingTodo, ...updatedTodo })
+            }
+            onCancel={handleCancelEdit}
+          />
+        </div>
+      )}
+      {todos.map((todo) => (
         <TodoItem
           key={todo.id}
           title={todo.title}
           description={todo.description}
           completed={todo.completed}
-          onEdit={() => handleEditClick(todo)}
+          onEdit={() => handleEdit(todo)}
+          onDelete={() => handleDelete(todo.id)}
         />
       ))}
-
-      {isEditFormVisible && currentTodo && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <TodoListItemEditForm
-            initialTitle={currentTodo.title}
-            initialDescription={currentTodo.description}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        </div>
-      )}
     </div>
   );
 };
