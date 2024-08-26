@@ -1,14 +1,43 @@
 import React from "react";
 import { PencilIcon, TrashIcon } from "@heroicons/react/20/solid";
+import axios from "axios";
 
-const TodoItem = ({ id, title, description, completed, onEdit, onDelete }) => {
+const TodoItem = ({
+  id,
+  title,
+  description,
+  completed,
+  onEdit,
+  onDelete,
+  onUpdate,
+}) => {
+  const handleCheckboxChange = async (event) => {
+    const newCompletedStatus = event.target.checked;
+
+    try {
+      // Update the todo item in the database with the new completed status
+      const response = await axios.put(`http://127.0.0.1:8000/todos/${id}`, {
+        title,
+        description,
+        completed: newCompletedStatus,
+      });
+
+      // Update the local state if `onUpdate` is provided
+      if (onUpdate) {
+        onUpdate(response.data);
+      }
+    } catch (error) {
+      console.error("Error updating todo:", error);
+    }
+  };
+
   return (
     <div className="flex items-start pt-6">
       <input
         type="checkbox"
         className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
         checked={completed}
-        readOnly
+        onChange={handleCheckboxChange}
       />
       <div className="ml-3 flex-1">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
