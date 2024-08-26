@@ -1,7 +1,22 @@
-from fastapi import FastAPI, HTTPException
+import logging
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List, Optional
+from sqlalchemy import create_engine, Column, Integer, String, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+DATABASE_URL = "mysql+mysqlconnector://root:Parthk05%40MySql@localhost:3306/todo_app"
+
+# Create the SQLAlchemy engine and session
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 app = FastAPI()
 
@@ -14,7 +29,15 @@ app.add_middleware(
     allow_headers=["*"],  # Adjust this list to specify allowed headers
 )
 
-# Define the Pydantic model
+# SQLAlchemy model for TodoItem
+class TodoItemDB(Base):
+    __tablename__ = "todos"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(length=255), index=True)
+    description = Column(String(length=255), nullable=True)
+    completed = Column(Boolean, default=False)
+
+# Pydantic models for request and response
 class TodoItem(BaseModel):
     title: str
     description: Optional[str] = None
@@ -23,60 +46,74 @@ class TodoItem(BaseModel):
 class TodoItemResponse(TodoItem):
     id: int
 
-# In-memory database (list) to store To-Do items
-todos = []
-next_id = 1
+# Create the database tables
+Base.metadata.create_all(bind=engine)
+
+# Dependency to get the database session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # GET /: Display a welcome message
 @app.get("/")
-def read_root():
+async def read_root():
     return {"message": "Backend server running at port 8000"}
 
 # POST /todos/: Add a To-Do Item
 @app.post("/todos/", response_model=TodoItemResponse)
-def create_todo(todo: TodoItem):
-    global next_id
-    todo_item = TodoItemResponse(id=next_id, **todo.dict())
-    todos.append(todo_item)
-    next_id += 1
-    return todo_item
+async def create_todo(todo: TodoItem, db: Session = Depends(get_db)):
+    db_todo = TodoItemDB(**todo.dict())
+    db.add(db_todo)
+    db.commit()
+    db.refresh(db_todo)
+    logger.info(f"Created Todo with ID: {db_todo.id}")
+    return db_todo
 
 # GET /todos/: Retrieve All To-Do Items
 @app.get("/todos/", response_model=List[TodoItemResponse])
-def get_todos():
+async def get_todos(db: Session = Depends(get_db)):
+    todos = db.query(TodoItemDB).all()
+    logger.info(f"Retrieved {len(todos)} todos from the database")
     return todos
 
 # GET /todos/{id}: Retrieve a Single To-Do Item by ID
 @app.get("/todos/{id}", response_model=TodoItemResponse)
-def get_todo_by_id(id: int):
-    for todo in todos:
-        if todo.id == id:
-            return todo
-    raise HTTPException(status_code=404, detail="Todo not found")
+async def get_todo_by_id(id: int, db: Session = Depends(get_db)):
+    todo = db.query(TodoItemDB).filter(TodoItemDB.id == id).first()
+    if todo is None:
+        logger.warning(f"Todo with ID {id} not found")
+        raise HTTPException(status_code=404, detail="Todo not found")
+    logger.info(f"Retrieved Todo with ID: {id}")
+    return todo
 
 # PUT /todos/{id}: Update a To-Do Item by ID
 @app.put("/todos/{id}", response_model=TodoItemResponse)
-def update_todo(id: int, updated_todo: TodoItem):
-    for index, todo in enumerate(todos):
-        if todo.id == id:
-            updated_todo_item = TodoItemResponse(id=id, **updated_todo.dict())
-            todos[index] = updated_todo_item
-            return updated_todo_item
-    raise HTTPException(status_code=404, detail="Todo not found")
+async def update_todo(id: int, updated_todo: TodoItem, db: Session = Depends(get_db)):
+    db_todo = db.query(TodoItemDB).filter(TodoItemDB.id == id).first()
+    if db_todo is None:
+        logger.warning(f"Todo with ID {id} not found for update")
+        raise HTTPException(status_code=404, detail="Todo not found")
+    for key, value in updated_todo.dict().items():
+        setattr(db_todo, key, value)
+    db.commit()
+    db.refresh(db_todo)
+    logger.info(f"Updated Todo with ID: {id}")
+    return db_todo
 
 # DELETE /todos/{id}: Delete a To-Do Item by ID
 @app.delete("/todos/{id}")
-def delete_todo(id: int):
-    for index, todo in enumerate(todos):
-        if todo.id == id:
-            todos.pop(index)
-            return {"detail": "Todo deleted"}
-    raise HTTPException(status_code=404, detail="Todo not found")
-
-# Event handler for startup
-@app.on_event("startup")
-def startup_event():
-    print("Backend server running at port 8000")
+async def delete_todo(id: int, db: Session = Depends(get_db)):
+    db_todo = db.query(TodoItemDB).filter(TodoItemDB.id == id).first()
+    if db_todo is None:
+        logger.warning(f"Todo with ID {id} not found for deletion")
+        raise HTTPException(status_code=404, detail="Todo not found")
+    db.delete(db_todo)
+    db.commit()
+    logger.info(f"Deleted Todo with ID: {id}")
+    return {"detail": "Todo deleted"}
 
 if __name__ == "__main__":
     import uvicorn
