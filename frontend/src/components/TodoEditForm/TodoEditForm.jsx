@@ -32,7 +32,7 @@ const TodoListItemEditForm = ({
           Description
         </label>
         <textarea
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md h-32" // Adjust the height here
+          className="mt-1 block w-full p-2 border border-gray-300 rounded-md h-32"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
